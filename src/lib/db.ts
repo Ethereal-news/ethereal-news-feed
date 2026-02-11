@@ -101,16 +101,17 @@ export function insertItems(items: NewNewsItem[]): number {
 export function getItems(status?: Status, includeInIssue = false): NewsItem[] {
   const db = getDb();
   const issueFilter = includeInIssue ? "" : " AND issue_url IS NULL";
+  const orderBy = "ORDER BY category, CASE WHEN source_type IN ('eip') THEN 1 ELSE 0 END, source_name, title";
   let rows;
   if (status) {
     rows = db
       .prepare(
-        `SELECT * FROM items WHERE status = ?${issueFilter} ORDER BY published_at DESC`
+        `SELECT * FROM items WHERE status = ?${issueFilter} ${orderBy}`
       )
       .all(status);
   } else {
     const where = includeInIssue ? "" : " WHERE issue_url IS NULL";
-    rows = db.prepare(`SELECT * FROM items${where} ORDER BY published_at DESC`).all();
+    rows = db.prepare(`SELECT * FROM items${where} ${orderBy}`).all();
   }
   return (rows as Array<Record<string, unknown>>).map(rowToItem);
 }

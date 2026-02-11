@@ -4,6 +4,7 @@ import {
   fetchRecentReleases,
   extractVersion,
   getDescription,
+  isPrerelease,
   batchFetch,
 } from "./github";
 
@@ -97,16 +98,11 @@ const DEV_TOOLS: ToolRepo[] = [
   { name: "Wagmi", owner: "wevm", repo: "wagmi" },
 ];
 
-function isNightly(tagName: string, name: string): boolean {
-  const lower = `${tagName} ${name}`.toLowerCase();
-  return lower.includes("nightly") || lower.includes("canary") || lower.includes("dev");
-}
-
 async function fetchTool(tool: ToolRepo): Promise<NewNewsItem[]> {
   const releases = await fetchRecentReleases(tool.owner, tool.repo);
 
   return releases
-    .filter((r) => !r.prerelease && !isNightly(r.tag_name, r.name))
+    .filter((r) => !isPrerelease(r))
     .map((release) => ({
       title: `${tool.name} ${release.tag_name}`,
       url: release.html_url,

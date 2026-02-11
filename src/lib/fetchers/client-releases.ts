@@ -4,6 +4,7 @@ import {
   fetchRecentReleases,
   extractVersion,
   getDescription,
+  isPrerelease,
   batchFetch,
 } from "./github";
 
@@ -57,7 +58,7 @@ async function fetchClient(client: ClientRepo): Promise<NewNewsItem[]> {
     category: getDefaultCategory("client_release"),
     published_at: release.published_at,
     version: extractVersion(release.tag_name),
-    prerelease: release.prerelease,
+    prerelease: isPrerelease(release),
   }));
 }
 

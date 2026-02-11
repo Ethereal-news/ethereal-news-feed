@@ -80,6 +80,12 @@ export function getDescription(body: string, maxLength = 200): string {
   return cleaned.slice(0, maxLength).trimEnd() + "...";
 }
 
+export function isPrerelease(release: { prerelease: boolean; tag_name: string; name: string }): boolean {
+  if (release.prerelease) return true;
+  const lower = `${release.tag_name} ${release.name}`.toLowerCase();
+  return /-(rc|alpha|beta|dev|nightly|canary)[.\d-]|\.rc\d/i.test(lower);
+}
+
 // Process repos in batches with delay to avoid rate limits
 export async function batchFetch<T, R>(
   items: T[],

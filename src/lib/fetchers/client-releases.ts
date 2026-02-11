@@ -1,7 +1,7 @@
 import { NewNewsItem } from "../types";
 import { getDefaultCategory } from "../categories";
 import {
-  fetchLatestRelease,
+  fetchRecentReleases,
   extractVersion,
   getDescription,
   batchFetch,
@@ -45,24 +45,20 @@ const CLIENTS: ClientRepo[] = [
   },
 ];
 
-async function fetchClient(client: ClientRepo): Promise<NewNewsItem | null> {
-  const release = await fetchLatestRelease(client.owner, client.repo);
-  if (!release) return null;
+async function fetchClient(client: ClientRepo): Promise<NewNewsItem[]> {
+  const releases = await fetchRecentReleases(client.owner, client.repo);
 
-  const version = extractVersion(release.tag_name);
-  const title = `${client.name} ${release.tag_name}`;
-
-  return {
-    title,
+  return releases.map((release) => ({
+    title: `${client.name} ${release.tag_name}`,
     url: release.html_url,
     description: getDescription(release.body),
-    source_type: "client_release",
+    source_type: "client_release" as const,
     source_name: `${client.name} (${client.layer})`,
     category: getDefaultCategory("client_release"),
     published_at: release.published_at,
-    version,
+    version: extractVersion(release.tag_name),
     prerelease: release.prerelease,
-  };
+  }));
 }
 
 export async function fetchClientReleases(): Promise<NewNewsItem[]> {

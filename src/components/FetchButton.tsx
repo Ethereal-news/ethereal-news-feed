@@ -15,7 +15,7 @@ export default function FetchButton() {
       const res = await fetch("/api/fetch", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        let msg = `Fetched ${data.fetched} items (${data.inserted} new): ${data.breakdown.clients} clients, ${data.breakdown.devTools} dev tools, ${data.breakdown.blogs} blogs`;
+        let msg = `Fetched ${data.fetched} items (${data.inserted} new): ${data.breakdown.clients} clients, ${data.breakdown.devTools} dev tools, ${data.breakdown.blogs} blogs, ${data.breakdown.eips} EIPs, ${data.breakdown.ercs} ERCs`;
         if (data.issue) {
           msg += ` | ${data.issue.title}: ${data.issue.matched} linked`;
         }

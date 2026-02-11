@@ -98,17 +98,19 @@ export function insertItems(items: NewNewsItem[]): number {
   return inserted;
 }
 
-export function getItems(status?: Status): NewsItem[] {
+export function getItems(status?: Status, includeInIssue = false): NewsItem[] {
   const db = getDb();
+  const issueFilter = includeInIssue ? "" : " AND issue_url IS NULL";
   let rows;
   if (status) {
     rows = db
       .prepare(
-        "SELECT * FROM items WHERE status = ? ORDER BY published_at DESC"
+        `SELECT * FROM items WHERE status = ?${issueFilter} ORDER BY published_at DESC`
       )
       .all(status);
   } else {
-    rows = db.prepare("SELECT * FROM items ORDER BY published_at DESC").all();
+    const where = includeInIssue ? "" : " WHERE issue_url IS NULL";
+    rows = db.prepare(`SELECT * FROM items${where} ORDER BY published_at DESC`).all();
   }
   return (rows as Array<Record<string, unknown>>).map(rowToItem);
 }

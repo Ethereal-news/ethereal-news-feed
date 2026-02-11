@@ -3,10 +3,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 
 const TABS = [
-  { label: "All", value: "" },
   { label: "Pending", value: "pending" },
-  { label: "Approved", value: "approved" },
-  { label: "Rejected", value: "rejected" },
+  { label: "Included", value: "approved" },
+  { label: "Excluded", value: "rejected" },
+  { label: "All", value: "" },
 ] as const;
 
 export default function StatusFilter() {

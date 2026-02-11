@@ -67,5 +67,15 @@ export async function fetchLatestIssue(): Promise<IssueInfo | null> {
 }
 
 export function isUrlInIssue(itemUrl: string, issueLinks: Set<string>): boolean {
-  return issueLinks.has(normalizeUrl(itemUrl));
+  const normalized = normalizeUrl(itemUrl);
+  // Exact match
+  if (issueLinks.has(normalized)) return true;
+  // Check if any issue link is a sub-path of the item URL or vice versa
+  // e.g. item: .../pull/11254, issue: .../pull/11254/changes
+  for (const link of issueLinks) {
+    if (link.startsWith(normalized + "/") || normalized.startsWith(link + "/")) {
+      return true;
+    }
+  }
+  return false;
 }

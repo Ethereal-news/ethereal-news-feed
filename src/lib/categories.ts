@@ -8,5 +8,7 @@ export function getDefaultCategory(sourceType: SourceType): Category {
       return "Developers";
     case "blog_post":
       return "Ecosystem";
+    case "eip":
+      return "Layer 1";
   }
 }

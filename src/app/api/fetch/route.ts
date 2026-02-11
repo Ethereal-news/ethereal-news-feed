@@ -3,20 +3,24 @@ import { insertItems, getAllItemUrls, markItemsInIssue } from "@/lib/db";
 import { fetchClientReleases } from "@/lib/fetchers/client-releases";
 import { fetchDevToolReleases } from "@/lib/fetchers/dev-tool-releases";
 import { fetchBlogPosts } from "@/lib/fetchers/blog-posts";
+import { fetchNewEIPs } from "@/lib/fetchers/eips";
+import { fetchNewERCs } from "@/lib/fetchers/ercs";
 import { fetchLatestIssue, isUrlInIssue } from "@/lib/fetchers/issue-checker";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
   try {
-    const [clients, devTools, blogs, latestIssue] = await Promise.all([
+    const [clients, devTools, blogs, eips, ercs, latestIssue] = await Promise.all([
       fetchClientReleases(),
       fetchDevToolReleases(),
       fetchBlogPosts(),
+      fetchNewEIPs(),
+      fetchNewERCs(),
       fetchLatestIssue(),
     ]);
 
-    const allItems = [...clients, ...devTools, ...blogs];
+    const allItems = [...clients, ...devTools, ...blogs, ...eips, ...ercs];
     const inserted = insertItems(allItems);
 
     // Check all items against the latest Ethereal news issue
@@ -36,6 +40,8 @@ export async function POST() {
         clients: clients.length,
         devTools: devTools.length,
         blogs: blogs.length,
+        eips: eips.length,
+        ercs: ercs.length,
       },
       issue: latestIssue
         ? { title: latestIssue.title, matched: issueMatched }

@@ -20,13 +20,13 @@ export default function CategorySection({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <section className="mb-6">
+    <section className="mb-4">
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex w-full items-center gap-2 text-left mb-3"
+        className="flex w-full items-center gap-2 text-left mb-1.5"
       >
         <svg
-          className={`h-4 w-4 text-slate-400 transition-transform ${
+          className={`h-3.5 w-3.5 text-slate-400 transition-transform ${
             collapsed ? "" : "rotate-90"
           }`}
           fill="none"
@@ -40,13 +40,13 @@ export default function CategorySection({
             d="M8.25 4.5l7.5 7.5-7.5 7.5"
           />
         </svg>
-        <h2 className="text-lg font-semibold text-slate-800">{category}</h2>
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+        <h2 className="text-sm font-semibold text-slate-800">{category}</h2>
+        <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
           {items.length}
         </span>
       </button>
       {!collapsed && (
-        <div className="ml-6 space-y-3">
+        <div className="ml-5 space-y-1">
           {items.map((item) => (
             <NewsItem
               key={item.id}

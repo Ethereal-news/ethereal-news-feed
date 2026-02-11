@@ -8,7 +8,7 @@ interface GitHubRelease {
   draft: boolean;
 }
 
-function getAuthHeader(): Record<string, string> {
+export function getAuthHeader(): Record<string, string> {
   const token = process.env.GITHUB_TOKEN;
   if (!token) return {};
 
@@ -18,11 +18,10 @@ function getAuthHeader(): Record<string, string> {
   return { Authorization: `token ${token}` };
 }
 
-export async function fetchLatestRelease(
+export async function fetchRecentReleases(
   owner: string,
   repo: string
-): Promise<GitHubRelease | null> {
-  // Try latest release first, fall back to most recent from releases list
+): Promise<GitHubRelease[]> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github.v3+json",
     "User-Agent": "ethereal-news-feed",
@@ -31,46 +30,37 @@ export async function fetchLatestRelease(
 
   try {
     const res = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/releases?per_page=5`,
+      `https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`,
       { headers }
     );
 
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
-        // Retry without auth
         const { Authorization: _, ...noAuth } = headers;
         const retryRes = await fetch(
-          `https://api.github.com/repos/${owner}/${repo}/releases?per_page=5`,
+          `https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`,
           { headers: noAuth }
         );
-        if (!retryRes.ok) return null;
-        const releases = (await retryRes.json()) as GitHubRelease[];
-        return findRecentRelease(releases);
+        if (!retryRes.ok) return [];
+        return findRecentReleases((await retryRes.json()) as GitHubRelease[]);
       }
-      return null;
+      return [];
     }
 
-    const releases = (await res.json()) as GitHubRelease[];
-    return findRecentRelease(releases);
+    return findRecentReleases((await res.json()) as GitHubRelease[]);
   } catch {
-    return null;
+    return [];
   }
 }
 
-function findRecentRelease(
-  releases: GitHubRelease[]
-): GitHubRelease | null {
+function findRecentReleases(releases: GitHubRelease[]): GitHubRelease[] {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  for (const release of releases) {
-    if (release.draft) continue;
-    const publishedAt = new Date(release.published_at);
-    if (publishedAt >= sevenDaysAgo) {
-      return release;
-    }
-  }
-  return null;
+  return releases.filter((release) => {
+    if (release.draft) return false;
+    return new Date(release.published_at) >= sevenDaysAgo;
+  });
 }
 
 export function extractVersion(tagName: string): string {
@@ -93,7 +83,7 @@ export function getDescription(body: string, maxLength = 200): string {
 // Process repos in batches with delay to avoid rate limits
 export async function batchFetch<T, R>(
   items: T[],
-  fn: (item: T) => Promise<R | null>,
+  fn: (item: T) => Promise<R[]>,
   batchSize = 10,
   delayMs = 200
 ): Promise<R[]> {
@@ -103,7 +93,7 @@ export async function batchFetch<T, R>(
     const batch = items.slice(i, i + batchSize);
     const batchResults = await Promise.all(batch.map(fn));
     for (const r of batchResults) {
-      if (r) results.push(r);
+      results.push(...r);
     }
     if (i + batchSize < items.length) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));

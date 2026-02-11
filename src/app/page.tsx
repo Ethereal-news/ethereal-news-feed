@@ -18,7 +18,9 @@ export default async function Home({
   const filterStatus =
     status && validStatuses.includes(status) ? status : undefined;
 
-  const items = getItems(filterStatus);
+  // Show items in a previous issue only on the All view
+  const includeInIssue = !filterStatus;
+  const items = getItems(filterStatus, includeInIssue);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">

@@ -1,7 +1,7 @@
 import { NewNewsItem } from "../types";
 import { getDefaultCategory } from "../categories";
 import {
-  fetchLatestRelease,
+  fetchRecentReleases,
   extractVersion,
   getDescription,
   batchFetch,
@@ -97,24 +97,27 @@ const DEV_TOOLS: ToolRepo[] = [
   { name: "Wagmi", owner: "wevm", repo: "wagmi" },
 ];
 
-async function fetchTool(tool: ToolRepo): Promise<NewNewsItem | null> {
-  const release = await fetchLatestRelease(tool.owner, tool.repo);
-  if (!release) return null;
+function isNightly(tagName: string, name: string): boolean {
+  const lower = `${tagName} ${name}`.toLowerCase();
+  return lower.includes("nightly") || lower.includes("canary") || lower.includes("dev");
+}
 
-  const version = extractVersion(release.tag_name);
-  const title = `${tool.name} ${release.tag_name}`;
+async function fetchTool(tool: ToolRepo): Promise<NewNewsItem[]> {
+  const releases = await fetchRecentReleases(tool.owner, tool.repo);
 
-  return {
-    title,
-    url: release.html_url,
-    description: getDescription(release.body),
-    source_type: "dev_tool_release",
-    source_name: tool.name,
-    category: getDefaultCategory("dev_tool_release"),
-    published_at: release.published_at,
-    version,
-    prerelease: release.prerelease,
-  };
+  return releases
+    .filter((r) => !r.prerelease && !isNightly(r.tag_name, r.name))
+    .map((release) => ({
+      title: `${tool.name} ${release.tag_name}`,
+      url: release.html_url,
+      description: getDescription(release.body),
+      source_type: "dev_tool_release" as const,
+      source_name: tool.name,
+      category: getDefaultCategory("dev_tool_release"),
+      published_at: release.published_at,
+      version: extractVersion(release.tag_name),
+      prerelease: false,
+    }));
 }
 
 export async function fetchDevToolReleases(): Promise<NewNewsItem[]> {

@@ -16,7 +16,7 @@ export type Category = (typeof CATEGORIES)[number];
 
 export type Status = "pending" | "approved" | "rejected";
 
-export type SourceType = "client_release" | "dev_tool_release" | "blog_post";
+export type SourceType = "client_release" | "dev_tool_release" | "blog_post" | "eip";
 
 export interface NewsItem {
   id: number;

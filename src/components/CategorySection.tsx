@@ -9,7 +9,6 @@ interface CategorySectionProps {
   items: NewsItemType[];
   onStatusChange: (id: number, status: Status) => void;
   onCategoryChange: (id: number, category: Category) => void;
-  onIssueUrlChange: (id: number, issueUrl: string | null) => void;
 }
 
 export default function CategorySection({
@@ -17,7 +16,6 @@ export default function CategorySection({
   items,
   onStatusChange,
   onCategoryChange,
-  onIssueUrlChange,
 }: CategorySectionProps) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -55,7 +53,6 @@ export default function CategorySection({
               item={item}
               onStatusChange={onStatusChange}
               onCategoryChange={onCategoryChange}
-              onIssueUrlChange={onIssueUrlChange}
             />
           ))}
         </div>

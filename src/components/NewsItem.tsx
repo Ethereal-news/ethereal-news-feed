@@ -7,7 +7,6 @@ interface NewsItemProps {
   item: NewsItemType;
   onStatusChange: (id: number, status: Status) => void;
   onCategoryChange: (id: number, category: Category) => void;
-  onIssueUrlChange: (id: number, issueUrl: string | null) => void;
 }
 
 function formatDate(dateStr: string): string {
@@ -19,26 +18,29 @@ function formatDate(dateStr: string): string {
 }
 
 function extractIssueLabel(url: string): string {
-  // e.g. https://ethereal.news/ethereal-news-weekly-10 -> #10
   const match = url.match(/(\d+)\/?$/);
   return match ? `#${match[1]}` : "issue";
+}
+
+function isOlderThan7Days(dateStr: string): boolean {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  return new Date(dateStr) < sevenDaysAgo;
 }
 
 export default function NewsItem({
   item,
   onStatusChange,
   onCategoryChange,
-  onIssueUrlChange,
 }: NewsItemProps) {
-  function handleSetIssueUrl() {
-    const url = prompt("Ethereal news issue URL:", item.issue_url || "");
-    if (url !== null) {
-      onIssueUrlChange(item.id, url || null);
-    }
-  }
+  const stale = !!item.issue_url || isOlderThan7Days(item.published_at);
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <div className={`rounded-lg border bg-white p-4 shadow-sm ${
+      stale
+        ? "border-slate-200 opacity-50"
+        : "border-slate-200"
+    }`}>
       <div className="text-xs text-slate-400 mb-1 flex items-center gap-1.5">
         <span>
           {formatDate(item.published_at)} &middot; {item.source_name}
@@ -129,20 +131,20 @@ export default function NewsItem({
           itemId={item.id}
           onChange={onCategoryChange}
         />
-        <button
-          onClick={handleSetIssueUrl}
-          title={item.issue_url ? "Edit issue link" : "Link to issue"}
-          className={`ml-auto flex h-7 w-7 items-center justify-center rounded transition-colors ${
-            item.issue_url
-              ? "bg-indigo-100 text-indigo-600"
-              : "text-slate-300 hover:bg-slate-100 hover:text-slate-500"
-          }`}
-        >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-            <path d="M12.232 4.232a2.5 2.5 0 013.536 3.536l-1.225 1.224a.75.75 0 001.061 1.06l1.224-1.224a4 4 0 00-5.656-5.656l-3 3a4 4 0 00.225 5.865.75.75 0 00.977-1.138 2.5 2.5 0 01-.142-3.667l3-3z" />
-            <path d="M11.603 7.963a.75.75 0 00-.977 1.138 2.5 2.5 0 01.142 3.667l-3 3a2.5 2.5 0 01-3.536-3.536l1.225-1.224a.75.75 0 00-1.061-1.06l-1.224 1.224a4 4 0 005.656 5.656l3-3a4 4 0 00-.225-5.865z" />
-          </svg>
-        </button>
+        {item.issue_url && (
+          <a
+            href={item.issue_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`In ${extractIssueLabel(item.issue_url)}`}
+            className="ml-auto flex h-7 w-7 items-center justify-center rounded bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path d="M12.232 4.232a2.5 2.5 0 013.536 3.536l-1.225 1.224a.75.75 0 001.061 1.06l1.224-1.224a4 4 0 00-5.656-5.656l-3 3a4 4 0 00.225 5.865.75.75 0 00.977-1.138 2.5 2.5 0 01-.142-3.667l3-3z" />
+              <path d="M11.603 7.963a.75.75 0 00-.977 1.138 2.5 2.5 0 01.142 3.667l-3 3a2.5 2.5 0 01-3.536-3.536l1.225-1.224a.75.75 0 00-1.061-1.06l-1.224 1.224a4 4 0 005.656 5.656l3-3a4 4 0 00-.225-5.865z" />
+            </svg>
+          </a>
+        )}
       </div>
     </div>
   );

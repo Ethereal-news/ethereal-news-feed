@@ -1,21 +1,33 @@
 import { NextResponse } from "next/server";
-import { insertItems } from "@/lib/db";
+import { insertItems, getAllItemUrls, markItemsInIssue } from "@/lib/db";
 import { fetchClientReleases } from "@/lib/fetchers/client-releases";
 import { fetchDevToolReleases } from "@/lib/fetchers/dev-tool-releases";
 import { fetchBlogPosts } from "@/lib/fetchers/blog-posts";
+import { fetchLatestIssue, isUrlInIssue } from "@/lib/fetchers/issue-checker";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
   try {
-    const [clients, devTools, blogs] = await Promise.all([
+    const [clients, devTools, blogs, latestIssue] = await Promise.all([
       fetchClientReleases(),
       fetchDevToolReleases(),
       fetchBlogPosts(),
+      fetchLatestIssue(),
     ]);
 
     const allItems = [...clients, ...devTools, ...blogs];
     const inserted = insertItems(allItems);
+
+    // Check all items against the latest Ethereal news issue
+    let issueMatched = 0;
+    if (latestIssue) {
+      const allUrls = getAllItemUrls();
+      const matchingUrls = allUrls.filter((url) =>
+        isUrlInIssue(url, latestIssue.links)
+      );
+      issueMatched = markItemsInIssue(latestIssue.url, matchingUrls);
+    }
 
     return NextResponse.json({
       fetched: allItems.length,
@@ -25,6 +37,9 @@ export async function POST() {
         devTools: devTools.length,
         blogs: blogs.length,
       },
+      issue: latestIssue
+        ? { title: latestIssue.title, matched: issueMatched }
+        : null,
     });
   } catch (error) {
     console.error("Fetch error:", error);

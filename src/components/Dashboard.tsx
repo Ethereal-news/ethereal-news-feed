@@ -43,20 +43,6 @@ export default function Dashboard({ initialItems }: DashboardProps) {
     }
   }
 
-  async function handleIssueUrlChange(id: number, issueUrl: string | null) {
-    const res = await fetch(`/api/items/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ issue_url: issueUrl }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setItems((prev) =>
-        prev.map((item) => (item.id === id ? updated : item))
-      );
-    }
-  }
-
   // Group items by category in the defined order
   const grouped = CATEGORIES.map((category) => ({
     category,
@@ -83,7 +69,6 @@ export default function Dashboard({ initialItems }: DashboardProps) {
           items={items}
           onStatusChange={handleStatusChange}
           onCategoryChange={handleCategoryChange}
-          onIssueUrlChange={handleIssueUrlChange}
         />
       ))}
     </div>

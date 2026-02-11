@@ -178,6 +178,29 @@ export function bulkUpdateStatus(ids: number[], status: Status): number {
   return result.changes;
 }
 
+export function markItemsInIssue(issueUrl: string, itemUrls: string[]): number {
+  if (itemUrls.length === 0) return 0;
+  const db = getDb();
+  const stmt = db.prepare(
+    "UPDATE items SET issue_url = ? WHERE url = ? AND issue_url IS NULL"
+  );
+  let updated = 0;
+  const tx = db.transaction(() => {
+    for (const url of itemUrls) {
+      const result = stmt.run(issueUrl, url);
+      if (result.changes > 0) updated++;
+    }
+  });
+  tx();
+  return updated;
+}
+
+export function getAllItemUrls(): string[] {
+  const db = getDb();
+  const rows = db.prepare("SELECT url FROM items").all() as Array<{ url: string }>;
+  return rows.map((r) => r.url);
+}
+
 function rowToItem(row: Record<string, unknown>): NewsItem {
   return {
     id: row.id as number,

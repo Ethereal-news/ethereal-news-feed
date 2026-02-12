@@ -10,5 +10,7 @@ export function getDefaultCategory(sourceType: SourceType): Category {
       return "Ecosystem";
     case "eip":
       return "Layer 1";
+    case "research":
+      return "Research";
   }
 }

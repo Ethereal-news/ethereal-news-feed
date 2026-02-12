@@ -17,7 +17,12 @@ export default function CategorySelect({
     <select
       value={value}
       onChange={(e) => onChange(itemId, e.target.value as Category)}
-      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 focus:border-indigo-500 focus:outline-none"
+      className="px-2 py-0.5 text-xs font-medium focus:outline-none cursor-pointer"
+      style={{
+        background: "var(--white)",
+        color: "var(--black)",
+        border: "2px solid var(--black)",
+      }}
     >
       {CATEGORIES.map((cat) => (
         <option key={cat} value={cat}>

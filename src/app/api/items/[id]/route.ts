@@ -26,7 +26,7 @@ export async function PATCH(
     const updates: { status?: Status; category?: Category; issue_url?: string | null } = {};
 
     if (body.status) {
-      const validStatuses: Status[] = ["pending", "approved", "rejected"];
+      const validStatuses: Status[] = ["pending", "included", "excluded"];
       if (!validStatuses.includes(body.status)) {
         return NextResponse.json(
           { error: "Invalid status" },

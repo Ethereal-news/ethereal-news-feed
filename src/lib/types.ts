@@ -14,9 +14,9 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number];
 
-export type Status = "pending" | "approved" | "rejected";
+export type Status = "pending" | "included" | "excluded";
 
-export type SourceType = "client_release" | "dev_tool_release" | "blog_post" | "eip";
+export type SourceType = "client_release" | "dev_tool_release" | "blog_post" | "eip" | "research";
 
 export interface NewsItem {
   id: number;

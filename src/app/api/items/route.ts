@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const status = searchParams.get("status") as Status | null;
 
-  const validStatuses: Status[] = ["pending", "approved", "rejected"];
+  const validStatuses: Status[] = ["pending", "included", "excluded"];
   const filterStatus =
     status && validStatuses.includes(status) ? status : undefined;
 
@@ -31,7 +31,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const validStatuses: Status[] = ["pending", "approved", "rejected"];
+    const validStatuses: Status[] = ["pending", "included", "excluded"];
     if (!validStatuses.includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }

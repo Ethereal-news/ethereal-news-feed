@@ -43,6 +43,10 @@ export function getDb(): Database.Database {
     db.exec("ALTER TABLE items ADD COLUMN issue_url TEXT");
   }
 
+  // Migration: rename approved/rejected to included/excluded
+  db.exec("UPDATE items SET status = 'included' WHERE status = 'approved'");
+  db.exec("UPDATE items SET status = 'excluded' WHERE status = 'rejected'");
+
   return db;
 }
 

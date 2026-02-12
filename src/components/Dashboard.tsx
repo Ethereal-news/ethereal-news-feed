@@ -51,9 +51,9 @@ export default function Dashboard({ initialItems }: DashboardProps) {
 
   if (items.length === 0) {
     return (
-      <div className="text-center py-16 text-slate-500">
-        <p className="text-lg">No items yet</p>
-        <p className="text-sm mt-1">
+      <div className="text-center py-16">
+        <p className="text-lg font-bold uppercase" style={{ color: "var(--black)" }}>No items yet</p>
+        <p className="text-sm mt-1 font-medium" style={{ color: "var(--gray-dark)" }}>
           Click the Fetch button to load items from sources
         </p>
       </div>

@@ -3,10 +3,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 
 const TABS = [
-  { label: "Pending", value: "pending" },
-  { label: "Included", value: "approved" },
-  { label: "Excluded", value: "rejected" },
-  { label: "All", value: "" },
+  { label: "Pending", value: "pending", color: "var(--yellow)", textColor: "var(--black)" },
+  { label: "Included", value: "included" as const, color: "var(--green)", textColor: "var(--white)" },
+  { label: "Excluded", value: "excluded" as const, color: "var(--red)", textColor: "var(--white)" },
+  { label: "All", value: "", color: "var(--black)", textColor: "var(--white)" },
 ] as const;
 
 export default function StatusFilter() {
@@ -25,20 +25,28 @@ export default function StatusFilter() {
   }
 
   return (
-    <div className="flex gap-1 rounded-lg bg-slate-100 p-1 mb-6">
-      {TABS.map((tab) => (
-        <button
-          key={tab.value}
-          onClick={() => handleClick(tab.value)}
-          className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-            current === tab.value
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          {tab.label}
-        </button>
-      ))}
+    <div className="flex gap-0 mb-6">
+      {TABS.map((tab, i) => {
+        const active = current === tab.value;
+        return (
+          <button
+            key={tab.value}
+            onClick={() => handleClick(tab.value)}
+            className="px-4 py-2 text-sm font-bold uppercase transition-transform"
+            style={{
+              background: active ? tab.color : "var(--white)",
+              color: active ? tab.textColor : "var(--black)",
+              border: "var(--border)",
+              marginLeft: i === 0 ? 0 : "-3px",
+              boxShadow: active ? "var(--shadow-sm)" : "none",
+              position: active ? "relative" : undefined,
+              zIndex: active ? 1 : undefined,
+            }}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

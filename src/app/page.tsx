@@ -13,10 +13,11 @@ export default async function Home({
   searchParams: Promise<{ status?: string }>;
 }) {
   const params = await searchParams;
-  const status = params.status as Status | undefined;
-  const validStatuses: Status[] = ["pending", "approved", "rejected"];
-  const filterStatus =
-    status && validStatuses.includes(status) ? status : undefined;
+  const statusParam = params.status;
+  const validStatuses: Status[] = ["pending", "included", "excluded"];
+  const filterStatus = statusParam && validStatuses.includes(statusParam as Status)
+    ? (statusParam as Status)
+    : undefined;
 
   // Show items in a previous issue only on the All view
   const includeInIssue = !filterStatus;

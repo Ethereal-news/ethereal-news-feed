@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { insertItems, getAllItemUrls, markItemsInIssue } from "@/lib/db";
+import { insertItems, getAllItemUrls, markItemsInIssue, getDistinctIssueUrls } from "@/lib/db";
 import { fetchClientReleases } from "@/lib/fetchers/client-releases";
 import { fetchDevToolReleases } from "@/lib/fetchers/dev-tool-releases";
 import { fetchBlogPosts } from "@/lib/fetchers/blog-posts";
@@ -22,10 +22,20 @@ export async function POST() {
       fetchLatestIssue(),
     ]);
 
+    // Detect whether the latest issue is new (not yet seen in DB)
+    let isNewIssue = false;
+    if (latestIssue) {
+      const knownIssueUrls = getDistinctIssueUrls();
+      if (!knownIssueUrls.includes(latestIssue.url)) {
+        isNewIssue = true;
+      }
+    }
+
+    // Insert new items
     const allItems = [...clients, ...devTools, ...blogs, ...eips, ...ercs, ...research];
     const inserted = insertItems(allItems);
 
-    // Check all items against the latest Ethereal news issue
+    // Check all items against the latest Ethereal news issue (URL matching)
     let issueMatched = 0;
     if (latestIssue) {
       const allUrls = getAllItemUrls();
@@ -47,7 +57,7 @@ export async function POST() {
         research: research.length,
       },
       issue: latestIssue
-        ? { title: latestIssue.title, matched: issueMatched }
+        ? { title: latestIssue.title, matched: issueMatched, isNewIssue }
         : null,
     });
   } catch (error) {

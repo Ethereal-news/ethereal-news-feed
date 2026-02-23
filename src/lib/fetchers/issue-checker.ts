@@ -11,8 +11,11 @@ interface IssueInfo {
 function normalizeUrl(url: string): string {
   try {
     const u = new URL(url);
-    // Remove trailing slash, lowercase host
-    let normalized = `${u.protocol}//${u.host.toLowerCase()}${u.pathname.replace(/\/$/, "")}${u.search}${u.hash}`;
+    // Remove www. prefix, lowercase host
+    const host = u.host.toLowerCase().replace(/^www\./, "");
+    // Collapse duplicate slashes in path, remove trailing slash
+    const pathname = u.pathname.replace(/\/+/g, "/").replace(/\/$/, "");
+    let normalized = `${u.protocol}//${host}${pathname}${u.search}${u.hash}`;
     // Decode percent-encoding for comparison
     normalized = decodeURIComponent(normalized);
     return normalized;

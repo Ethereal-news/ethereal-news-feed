@@ -54,7 +54,7 @@ export function insertItem(item: NewNewsItem): void {
   const db = getDb();
   const stmt = db.prepare(`
     INSERT OR IGNORE INTO items (title, url, description, source_type, source_name, category, published_at, fetched_at, status, version, prerelease)
-    VALUES (@title, @url, @description, @source_type, @source_name, @category, @published_at, @fetched_at, 'pending', @version, @prerelease)
+    VALUES (@title, @url, @description, @source_type, @source_name, @category, @published_at, @fetched_at, @status, @version, @prerelease)
   `);
   stmt.run({
     title: item.title,
@@ -65,6 +65,7 @@ export function insertItem(item: NewNewsItem): void {
     category: item.category,
     published_at: item.published_at,
     fetched_at: new Date().toISOString(),
+    status: item.prerelease ? 'excluded' : 'pending',
     version: item.version ?? null,
     prerelease: item.prerelease ? 1 : 0,
   });
@@ -74,7 +75,7 @@ export function insertItems(items: NewNewsItem[]): number {
   const db = getDb();
   const insert = db.prepare(`
     INSERT OR IGNORE INTO items (title, url, description, source_type, source_name, category, published_at, fetched_at, status, version, prerelease)
-    VALUES (@title, @url, @description, @source_type, @source_name, @category, @published_at, @fetched_at, 'pending', @version, @prerelease)
+    VALUES (@title, @url, @description, @source_type, @source_name, @category, @published_at, @fetched_at, @status, @version, @prerelease)
   `);
 
   const now = new Date().toISOString();
@@ -91,6 +92,7 @@ export function insertItems(items: NewNewsItem[]): number {
         category: item.category,
         published_at: item.published_at,
         fetched_at: now,
+        status: item.prerelease ? 'excluded' : 'pending',
         version: item.version ?? null,
         prerelease: item.prerelease ? 1 : 0,
       });
@@ -207,6 +209,15 @@ export function getAllItemUrls(): string[] {
   const rows = db.prepare("SELECT url FROM items").all() as Array<{ url: string }>;
   return rows.map((r) => r.url);
 }
+
+export function getDistinctIssueUrls(): string[] {
+  const db = getDb();
+  const rows = db
+    .prepare("SELECT DISTINCT issue_url FROM items WHERE issue_url IS NOT NULL")
+    .all() as Array<{ issue_url: string }>;
+  return rows.map((r) => r.issue_url);
+}
+
 
 function rowToItem(row: Record<string, unknown>): NewsItem {
   return {

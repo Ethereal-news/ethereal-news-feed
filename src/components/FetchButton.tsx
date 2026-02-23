@@ -17,6 +17,9 @@ export default function FetchButton() {
       if (res.ok) {
         let msg = `Fetched ${data.fetched} items (${data.inserted} new): ${data.breakdown.clients} clients, ${data.breakdown.devTools} dev tools, ${data.breakdown.blogs} blogs, ${data.breakdown.eips} EIPs, ${data.breakdown.ercs} ERCs, ${data.breakdown.research} research`;
         if (data.issue) {
+          if (data.issue.isNewIssue) {
+            msg += ` | New issue detected.`;
+          }
           msg += ` | ${data.issue.title}: ${data.issue.matched} linked`;
         }
         setResult(msg);

@@ -30,6 +30,8 @@ const BLOG_FEEDS: BlogFeed[] = [
   { name: "Josh Stark Blog", url: "https://api.paragraph.com/blogs/rss/@josh-stark" },
   { name: "Geodework Blog", url: "https://geode.build/feed.xml" },
   { name: "Argot Blog", url: "https://www.argot.org/feed.xml" },
+  { name: "IPTF Blog", url: "https://iptf.ethereum.org/feed.xml" },
+  { name: "zkEVM Blog", url: "https://zkevm.ethereum.foundation/feed.xml" },
 ];
 
 const parser = new XMLParser({

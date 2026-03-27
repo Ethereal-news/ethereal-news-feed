@@ -32,6 +32,8 @@ const BLOG_FEEDS: BlogFeed[] = [
   { name: "Argot Blog", url: "https://www.argot.org/feed.xml" },
   { name: "IPTF Blog", url: "https://iptf.ethereum.org/feed.xml" },
   { name: "zkEVM Blog", url: "https://zkevm.ethereum.foundation/feed.xml" },
+  { name: "PQ Ethereum Blog", url: "https://pq.ethereum.org/feed.xml" },
+  { name: "Protocol Support Blog", url: "https://ps.ethereum.foundation/feed.xml" },
 ];
 
 const parser = new XMLParser({

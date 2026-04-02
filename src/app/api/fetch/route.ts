@@ -7,6 +7,7 @@ import { fetchNewEIPs } from "@/lib/fetchers/eips";
 import { fetchNewERCs } from "@/lib/fetchers/ercs";
 import { fetchEthResearch } from "@/lib/fetchers/eth-research";
 import { fetchLatestIssue, isUrlInIssue } from "@/lib/fetchers/issue-checker";
+import { GitHubAuthError } from "@/lib/fetchers/github";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,13 @@ export async function POST() {
         : null,
     });
   } catch (error) {
+    if (error instanceof GitHubAuthError) {
+      console.error("GitHub auth error:", error.message);
+      return NextResponse.json(
+        { error: error.message },
+        { status: 401 }
+      );
+    }
     console.error("Fetch error:", error);
     return NextResponse.json(
       { error: "Failed to fetch items" },

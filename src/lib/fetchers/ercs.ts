@@ -1,6 +1,6 @@
 import { NewNewsItem } from "../types";
 import { getDefaultCategory } from "../categories";
-import { getAuthHeader, getDescription } from "./github";
+import { getAuthHeader, getDescription, GitHubAuthError } from "./github";
 
 interface GitHubIssue {
   number: number;
@@ -27,7 +27,12 @@ export async function fetchNewERCs(): Promise<NewNewsItem[]> {
       { headers }
     );
 
-    if (!res.ok) return [];
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        throw new GitHubAuthError(res.status);
+      }
+      return [];
+    }
 
     const issues = (await res.json()) as GitHubIssue[];
 
@@ -43,7 +48,8 @@ export async function fetchNewERCs(): Promise<NewNewsItem[]> {
         category: "Developers",
         published_at: issue.created_at,
       }));
-  } catch {
+  } catch (error) {
+    if (error instanceof GitHubAuthError) throw error;
     return [];
   }
 }

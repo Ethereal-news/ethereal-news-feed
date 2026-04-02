@@ -1,3 +1,12 @@
+export class GitHubAuthError extends Error {
+  constructor(status: number) {
+    super(
+      `GitHub API returned ${status}. Your token may be expired — regenerate it and update GITHUB_TOKEN.`
+    );
+    this.name = "GitHubAuthError";
+  }
+}
+
 interface GitHubRelease {
   tag_name: string;
   name: string;
@@ -36,19 +45,14 @@ export async function fetchRecentReleases(
 
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
-        const { Authorization: _, ...noAuth } = headers;
-        const retryRes = await fetch(
-          `https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`,
-          { headers: noAuth }
-        );
-        if (!retryRes.ok) return [];
-        return findRecentReleases((await retryRes.json()) as GitHubRelease[]);
+        throw new GitHubAuthError(res.status);
       }
       return [];
     }
 
     return findRecentReleases((await res.json()) as GitHubRelease[]);
-  } catch {
+  } catch (error) {
+    if (error instanceof GitHubAuthError) throw error;
     return [];
   }
 }

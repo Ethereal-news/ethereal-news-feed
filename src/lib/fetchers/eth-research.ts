@@ -36,6 +36,12 @@ function truncate(text: string, maxLength = 200): string {
   return text.slice(0, maxLength).trimEnd() + "...";
 }
 
+// Normalize Discourse topic URLs to use only the topic ID, stripping the slug
+// which can change. e.g. https://ethresear.ch/t/some-slug/12345 -> https://ethresear.ch/t/12345
+function normalizeDiscourseUrl(url: string): string {
+  return url.replace(/\/t\/[^/]+\/(\d+)$/, "/t/$1");
+}
+
 interface RssItem {
   title: string;
   link: string;
@@ -85,7 +91,7 @@ async function fetchDiscourse(source: DiscourseSource): Promise<NewNewsItem[]> {
       })
       .map((item) => ({
         title: String(item.title || ""),
-        url: String(item.link || ""),
+        url: normalizeDiscourseUrl(String(item.link || "")),
         description: truncate(stripHtml(String(item.description || ""))),
         source_type: "research" as const,
         source_name: source.name,

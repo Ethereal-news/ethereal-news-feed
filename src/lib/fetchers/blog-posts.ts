@@ -173,34 +173,51 @@ function parseFeed(xml: string): FeedEntry[] {
   return [];
 }
 
-async function fetchFeed(feed: BlogFeed): Promise<NewNewsItem[]> {
-  try {
-    const res = await fetchWithRedirects(feed.url);
-    if (!res || !res.ok) return [];
+async function fetchFeed(feed: BlogFeed, retries = 2): Promise<NewNewsItem[]> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetchWithRedirects(feed.url);
+      if (!res || !res.ok) {
+        if (attempt < retries) {
+          console.warn(`[blog-posts] ${feed.name}: HTTP ${res?.status ?? 'no response'}, retrying (${attempt + 1}/${retries})`);
+          await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+          continue;
+        }
+        console.error(`[blog-posts] ${feed.name}: failed after ${retries + 1} attempts`);
+        return [];
+      }
 
-    const xml = await res.text();
-    const entries = parseFeed(xml);
+      const xml = await res.text();
+      const entries = parseFeed(xml);
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    return entries
-      .filter((entry) => {
-        const published = new Date(entry.published_at);
-        return published >= sevenDaysAgo && !isNaN(published.getTime());
-      })
-      .map((entry) => ({
-        title: entry.title,
-        url: entry.url,
-        description: entry.description,
-        source_type: "blog_post" as const,
-        source_name: feed.name,
-        category: getDefaultCategory("blog_post"),
-        published_at: entry.published_at,
-      }));
-  } catch {
-    return [];
+      return entries
+        .filter((entry) => {
+          const published = new Date(entry.published_at);
+          return published >= sevenDaysAgo && !isNaN(published.getTime());
+        })
+        .map((entry) => ({
+          title: entry.title,
+          url: entry.url,
+          description: entry.description,
+          source_type: "blog_post" as const,
+          source_name: feed.name,
+          category: getDefaultCategory("blog_post"),
+          published_at: entry.published_at,
+        }));
+    } catch (err) {
+      if (attempt < retries) {
+        console.warn(`[blog-posts] ${feed.name}: ${err instanceof Error ? err.message : 'unknown error'}, retrying (${attempt + 1}/${retries})`);
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+        continue;
+      }
+      console.error(`[blog-posts] ${feed.name}: failed after ${retries + 1} attempts:`, err instanceof Error ? err.message : err);
+      return [];
+    }
   }
+  return [];
 }
 
 export async function fetchBlogPosts(): Promise<NewNewsItem[]> {

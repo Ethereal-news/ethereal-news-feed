@@ -16,7 +16,7 @@ interface ClientRepo {
 }
 
 const CLIENTS: ClientRepo[] = [
-  // Execution Layer (5)
+  // Execution Layer (6)
   { name: "Geth", owner: "ethereum", repo: "go-ethereum", layer: "EL" },
   { name: "Erigon", owner: "ledgerwatch", repo: "erigon", layer: "EL" },
   {
@@ -25,8 +25,9 @@ const CLIENTS: ClientRepo[] = [
     repo: "nethermind",
     layer: "EL",
   },
-  { name: "Besu", owner: "hyperledger", repo: "besu", layer: "EL" },
+  { name: "Besu", owner: "besu-eth", repo: "besu", layer: "EL" },
   { name: "Reth", owner: "paradigmxyz", repo: "reth", layer: "EL" },
+  { name: "Ethrex", owner: "lambdaclass", repo: "ethrex", layer: "EL" },
   // Consensus Layer (6)
   { name: "Prysm", owner: "prysmaticlabs", repo: "prysm", layer: "CL" },
   { name: "Lighthouse", owner: "sigp", repo: "lighthouse", layer: "CL" },

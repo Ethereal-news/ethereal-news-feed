@@ -31,6 +31,11 @@ const DEV_TOOLS: ToolRepo[] = [
     owner: "ethereumjs",
     repo: "ethereumjs-monorepo",
   },
+  {
+    name: "EthStaker Deposit CLI",
+    owner: "ethstaker",
+    repo: "ethstaker-deposit-cli",
+  },
   { name: "Voltaire", owner: "evmts", repo: "voltaire" },
   { name: "Forge Std", owner: "foundry-rs", repo: "forge-std" },
   { name: "Foundry", owner: "foundry-rs", repo: "foundry" },
@@ -53,12 +58,15 @@ const DEV_TOOLS: ToolRepo[] = [
   { name: "Heimdall", owner: "Jon-Becker", repo: "heimdall-rs" },
   { name: "Nethereum", owner: "Nethereum", repo: "Nethereum" },
   { name: "Hardhat", owner: "NomicFoundation", repo: "hardhat" },
+  { name: "solx", owner: "NomicFoundation", repo: "solx" },
   {
     name: "OpenZeppelin Contracts",
     owner: "OpenZeppelin",
     repo: "openzeppelin-contracts",
   },
   { name: "Otterscan", owner: "otterscan", repo: "otterscan" },
+  { name: "Solar", owner: "paradigmxyz", repo: "solar" },
+  { name: "Plank", owner: "plankevm", repo: "plank-monorepo" },
   {
     name: "micro-eth-signer",
     owner: "paulmillr",

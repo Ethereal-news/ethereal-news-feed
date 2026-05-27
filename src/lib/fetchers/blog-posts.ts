@@ -1,20 +1,23 @@
 import { XMLParser } from "fast-xml-parser";
-import { NewNewsItem } from "../types";
+import { Category, NewNewsItem } from "../types";
 import { getDefaultCategory } from "../categories";
 
 interface BlogFeed {
   name: string;
   url: string;
+  // Some feeds list entry links on a domain that differs from where the feed
+  // itself is hosted; rewrite those links to a reachable host.
+  rewriteUrl?: (url: string) => string;
 }
 
 const BLOG_FEEDS: BlogFeed[] = [
   {
     name: "Ethereum Foundation Blog",
-    url: "https://blog.ethereum.org/en/feed.xml",
+    url: "https://blog.ethereum.org/feed.xml",
   },
   {
-    name: "Ethereum Cat Herders Blog",
-    url: "https://medium.com/feed/ethereum-cat-herders",
+    name: "ECH",
+    url: "https://blog.echinstitute.org/feed.xml",
   },
   {
     name: "Ethereum Remix Substack",
@@ -22,10 +25,17 @@ const BLOG_FEEDS: BlogFeed[] = [
   },
   {
     name: "EthStaker Blog",
-    url: "https://raw.githubusercontent.com/eth-educators/github-actions/refs/heads/main/_data/blog_data.xml",
+    url: "https://api.paragraph.com/blogs/rss/@ethstaker",
   },
   { name: "ethPandaOps Blog", url: "https://ethpandaops.io/posts/rss.xml" },
-  { name: "Vitalik Buterin Blog", url: "https://vitalik.eth.limo/feed.xml" },
+  {
+    name: "Vitalik Buterin Blog",
+    url: "https://vitalik.eth.limo/feed.xml",
+    // The feed links entries to vitalik.ca, which no longer resolves for web
+    // traffic (MX records only); the eth.limo mirror serves the same paths.
+    rewriteUrl: (u) =>
+      u.replace("https://vitalik.ca/", "https://vitalik.eth.limo/"),
+  },
   { name: "Solidity Blog", url: "https://www.soliditylang.org/feed.xml" },
   { name: "Josh Stark Blog", url: "https://api.paragraph.com/blogs/rss/@josh-stark" },
   { name: "Geodework Blog", url: "https://geode.build/feed.xml" },
@@ -34,7 +44,55 @@ const BLOG_FEEDS: BlogFeed[] = [
   { name: "zkEVM Blog", url: "https://zkevm.ethereum.foundation/feed.xml" },
   { name: "PQ Ethereum Blog", url: "https://pq.ethereum.org/feed.xml" },
   { name: "Protocol Support Blog", url: "https://ps.ethereum.foundation/feed.xml" },
+  { name: "Sourcify Blog", url: "https://docs.sourcify.dev/blog/rss.xml" },
+  { name: "Erigon Blog", url: "https://erigon.tech/feed.xml" },
+  { name: "Sigma Prime Blog", url: "https://blog.sigmaprime.io/feeds/all.atom.xml" },
+  { name: "ChainSafe Blog", url: "https://blog.chainsafe.io/rss/" },
+  { name: "ApeWorX Blog", url: "https://api.paragraph.com/blogs/rss/@apeworx" },
+  {
+    name: "Vyper Blog",
+    url: "https://blog.vyperlang.org/index.xml",
+    // The Hugo site's baseURL is misconfigured, so item <link>s come through
+    // as relative paths (e.g. "/posts/selector-tables/"); prefix the host so
+    // the URLs we store are absolute.
+    rewriteUrl: (u) =>
+      u.startsWith("/") ? `https://blog.vyperlang.org${u}` : u,
+  },
 ];
+
+const SCRAPED_BLOGS: ScrapedBlog[] = [
+  {
+    name: "Protocol Consensus Blog",
+    listUrl: "https://consensus.ethereum.foundation/blog",
+    baseUrl: "https://consensus.ethereum.foundation",
+    category: "Layer 1",
+    parse: parseConsensusBlog,
+  },
+  {
+    name: "PSE Blog",
+    listUrl: "https://pse.dev/blog",
+    baseUrl: "https://pse.dev",
+    parse: parsePseBlog,
+  },
+  {
+    // The site advertises an Atom feed at /atom.xml in <head>, but that URL
+    // 404s (Zola template ships the link without enabling feed generation),
+    // so we scrape the post list off the homepage instead.
+    name: "Fe Blog",
+    listUrl: "https://blog.fe-lang.org/",
+    baseUrl: "https://blog.fe-lang.org",
+    parse: parseFeBlog,
+  },
+];
+
+// Posts dated at midnight UTC would otherwise be cut off by hours when the
+// fetcher runs later in the day, so floor the cutoff to the start of the day.
+function getRecentCutoff(): Date {
+  const cutoff = new Date();
+  cutoff.setUTCDate(cutoff.getUTCDate() - 7);
+  cutoff.setUTCHours(0, 0, 0, 0);
+  return cutoff;
+}
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -190,17 +248,16 @@ async function fetchFeed(feed: BlogFeed, retries = 2): Promise<NewNewsItem[]> {
       const xml = await res.text();
       const entries = parseFeed(xml);
 
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const cutoff = getRecentCutoff();
 
       return entries
         .filter((entry) => {
           const published = new Date(entry.published_at);
-          return published >= sevenDaysAgo && !isNaN(published.getTime());
+          return published >= cutoff && !isNaN(published.getTime());
         })
         .map((entry) => ({
           title: entry.title,
-          url: entry.url,
+          url: feed.rewriteUrl ? feed.rewriteUrl(entry.url) : entry.url,
           description: entry.description,
           source_type: "blog_post" as const,
           source_name: feed.name,
@@ -220,6 +277,157 @@ async function fetchFeed(feed: BlogFeed, retries = 2): Promise<NewNewsItem[]> {
   return [];
 }
 
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, "/");
+}
+
+interface ScrapedEntry {
+  href: string;
+  title: string;
+  description: string;
+  published: Date;
+}
+
+interface ScrapedBlog {
+  name: string;
+  listUrl: string;
+  baseUrl: string;
+  category?: Category;
+  parse: (html: string) => ScrapedEntry[];
+}
+
+function parseConsensusBlog(html: string): ScrapedEntry[] {
+  const itemRegex = /<div class="blog-list-item"><a href="([^"]+)"><div class="blog-list-item-date">([^<]+)<\/div><div class="blog-list-item-title">([^<]+)<\/div><div class="blog-list-item-excerpt">([^<]+)<\/div>/g;
+
+  const entries: ScrapedEntry[] = [];
+  let match;
+  while ((match = itemRegex.exec(html)) !== null) {
+    const [, href, dateStr, title, excerpt] = match;
+    entries.push({
+      href,
+      title: decodeEntities(title),
+      description: decodeEntities(excerpt),
+      published: new Date(dateStr),
+    });
+  }
+  return entries;
+}
+
+function parsePseBlog(html: string): ScrapedEntry[] {
+  // Each post card opens with <a class="group flex flex-col gap-4" href="/blog/SLUG">.
+  // Inside: a date <span class="text-xs ... uppercase ...">May 8, 2026</span>,
+  // a title <a class="font-display ..." href="/blog/SLUG">Title</a>,
+  // and an optional excerpt <span class="text-sm font-san font-normal ...">Excerpt</span>.
+  const cardOpen = /<a class="group[^"]*" href="(\/blog\/[a-z0-9-]+)"/g;
+  const dateRe = /<span class="text-xs[^"]*uppercase[^"]*">([^<]+)<\/span>/;
+  const titleRe = /<a class="font-display[^"]*" href="\/blog\/[^"]+">([^<]+)<\/a>/;
+  const excerptRe = /<span class="text-sm font-san[^"]*">([^<]+)<\/span>/;
+
+  const entries: ScrapedEntry[] = [];
+  const seen = new Set<string>();
+  let m;
+  while ((m = cardOpen.exec(html)) !== null) {
+    const href = m[1];
+    if (seen.has(href)) continue;
+    seen.add(href);
+
+    // Look at the chunk after this card open, bounded by the next card open
+    // (or 4 KB, whichever is shorter — enough to cover one card).
+    const start = m.index;
+    const next = html.indexOf('<a class="group', start + 1);
+    const chunk = html.slice(start, next === -1 ? start + 4000 : next);
+
+    const dateMatch = chunk.match(dateRe);
+    const titleMatch = chunk.match(titleRe);
+    if (!dateMatch || !titleMatch) continue;
+
+    const excerptMatch = chunk.match(excerptRe);
+    entries.push({
+      href,
+      title: decodeEntities(titleMatch[1]),
+      description: excerptMatch ? decodeEntities(excerptMatch[1]) : "",
+      // "May 8, 2026" parses as local midnight; force UTC so the cutoff
+      // comparison doesn't drift by the server's timezone offset.
+      published: new Date(`${dateMatch[1]} UTC`),
+    });
+  }
+  return entries;
+}
+
+function parseFeBlog(html: string): ScrapedEntry[] {
+  // Each post in the Zola list template renders as:
+  //   <section class="list-item">
+  //     <h1 class="title"><a href=URL>Title</a></h1>     ← href is unquoted
+  //     <time>YYYY-MM-DD</time>                          ← entities like &#x2F;
+  //     ...
+  //   </section>
+  const itemRegex = /<section class="list-item">[\s\S]*?<h1 class="title">\s*<a href=["']?([^"'\s>]+)["']?>([^<]+)<\/a>[\s\S]*?<time>(\d{4}-\d{2}-\d{2})<\/time>/g;
+
+  const entries: ScrapedEntry[] = [];
+  let match;
+  while ((match = itemRegex.exec(html)) !== null) {
+    const [, rawHref, title, dateStr] = match;
+    entries.push({
+      href: decodeEntities(rawHref),
+      title: decodeEntities(title),
+      description: "",
+      // Append T00:00:00Z so the date is parsed as UTC midnight rather than
+      // local time, keeping the cutoff comparison timezone-independent.
+      published: new Date(`${dateStr}T00:00:00Z`),
+    });
+  }
+  return entries;
+}
+
+async function scrapeBlog(blog: ScrapedBlog, retries = 2): Promise<NewNewsItem[]> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetchWithRedirects(blog.listUrl);
+      if (!res || !res.ok) {
+        if (attempt < retries) {
+          console.warn(`[blog-posts] ${blog.name}: HTTP ${res?.status ?? 'no response'}, retrying (${attempt + 1}/${retries})`);
+          await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+          continue;
+        }
+        console.error(`[blog-posts] ${blog.name}: failed after ${retries + 1} attempts`);
+        return [];
+      }
+
+      const html = await res.text();
+      const cutoff = getRecentCutoff();
+
+      return blog.parse(html)
+        .filter((entry) => !isNaN(entry.published.getTime()) && entry.published >= cutoff)
+        .map((entry) => ({
+          title: entry.title,
+          url: new URL(entry.href, blog.baseUrl).toString(),
+          description: truncate(entry.description),
+          source_type: "blog_post" as const,
+          source_name: blog.name,
+          category: blog.category ?? getDefaultCategory("blog_post"),
+          published_at: entry.published.toISOString(),
+        }));
+    } catch (err) {
+      if (attempt < retries) {
+        console.warn(`[blog-posts] ${blog.name}: ${err instanceof Error ? err.message : 'unknown error'}, retrying (${attempt + 1}/${retries})`);
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+        continue;
+      }
+      console.error(`[blog-posts] ${blog.name}: failed after ${retries + 1} attempts:`, err instanceof Error ? err.message : err);
+      return [];
+    }
+  }
+  return [];
+}
+
 export async function fetchBlogPosts(): Promise<NewNewsItem[]> {
   const results: NewNewsItem[] = [];
 
@@ -227,6 +435,12 @@ export async function fetchBlogPosts(): Promise<NewNewsItem[]> {
     const posts = await fetchFeed(feed);
     results.push(...posts);
     // Small delay between feeds to be polite
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  for (const blog of SCRAPED_BLOGS) {
+    const posts = await scrapeBlog(blog);
+    results.push(...posts);
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 

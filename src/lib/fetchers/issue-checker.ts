@@ -69,16 +69,28 @@ export async function fetchLatestIssue(): Promise<IssueInfo | null> {
   }
 }
 
+// A normalized URL has a "real" path when something remains after the origin,
+// e.g. https://host/news/post has a path but a bare https://host does not.
+function hasPath(normalizedUrl: string): boolean {
+  try {
+    return new URL(normalizedUrl).pathname.replace(/\/+$/, "") !== "";
+  } catch {
+    return false;
+  }
+}
+
 export function isUrlInIssue(itemUrl: string, issueLinks: Set<string>): boolean {
   const normalized = normalizeUrl(itemUrl);
   // Exact match
   if (issueLinks.has(normalized)) return true;
   // Check if any issue link is a sub-path of the item URL or vice versa
   // e.g. item: .../pull/11254, issue: .../pull/11254/changes
+  // Only when the shorter (parent) URL has a real path — otherwise a bare
+  // homepage link like https://metamask.io would match every article on the
+  // domain, wrongly suppressing them.
   for (const link of issueLinks) {
-    if (link.startsWith(normalized + "/") || normalized.startsWith(link + "/")) {
-      return true;
-    }
+    if (link.startsWith(normalized + "/") && hasPath(normalized)) return true;
+    if (normalized.startsWith(link + "/") && hasPath(link)) return true;
   }
   return false;
 }

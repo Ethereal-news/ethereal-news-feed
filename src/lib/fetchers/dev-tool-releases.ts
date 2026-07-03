@@ -17,6 +17,8 @@ interface ToolRepo {
 const DEV_TOOLS: ToolRepo[] = [
   { name: "Halmos", owner: "a16z", repo: "halmos" },
   { name: "Ape", owner: "ApeWorX", repo: "ape" },
+  { name: "Fe", owner: "argotorg", repo: "fe" },
+  { name: "hevm", owner: "argotorg", repo: "hevm" },
   { name: "Revm", owner: "bluealloy", repo: "revm" },
   { name: "EVMole", owner: "cdump", repo: "evmole" },
   { name: "Echidna", owner: "crytic", repo: "echidna" },

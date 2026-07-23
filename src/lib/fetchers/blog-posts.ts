@@ -86,6 +86,14 @@ const SCRAPED_BLOGS: ScrapedBlog[] = [
     baseUrl: "https://blog.fe-lang.org",
     parse: parseFeBlog,
   },
+  {
+    // Hand-rolled static site with no RSS feed (no feed.xml/rss.xml/atom.xml,
+    // none advertised in <head>), so we scrape the writing index.
+    name: "Terence Chain Blog",
+    listUrl: "https://terencechain.com/writing/",
+    baseUrl: "https://terencechain.com",
+    parse: parseTerenceBlog,
+  },
 ];
 
 // Posts dated at midnight UTC would otherwise be cut off by hours when the
@@ -385,6 +393,27 @@ function parseFeBlog(html: string): ScrapedEntry[] {
       // Append T00:00:00Z so the date is parsed as UTC midnight rather than
       // local time, keeping the cutoff comparison timezone-independent.
       published: new Date(`${dateStr}T00:00:00Z`),
+    });
+  }
+  return entries;
+}
+
+function parseTerenceBlog(html: string): ScrapedEntry[] {
+  // The writing index lists each post as a single <li>:
+  //   <li> <a href="/writing/SLUG">Title</a> <span class="meta">Jul 21, 2026</span> </li>
+  const itemRegex = /<li>\s*<a href="(\/writing\/[^"]+)">([^<]+)<\/a>\s*<span class="meta">([^<]+)<\/span>/g;
+
+  const entries: ScrapedEntry[] = [];
+  let match;
+  while ((match = itemRegex.exec(html)) !== null) {
+    const [, href, title, dateStr] = match;
+    entries.push({
+      href,
+      title: decodeEntities(title),
+      description: "",
+      // "Jul 21, 2026" parses as local midnight; force UTC so the cutoff
+      // comparison doesn't drift by the server's timezone offset.
+      published: new Date(`${dateStr} UTC`),
     });
   }
   return entries;

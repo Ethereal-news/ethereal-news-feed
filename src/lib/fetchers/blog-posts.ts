@@ -51,6 +51,7 @@ const BLOG_FEEDS: BlogFeed[] = [
   { name: "Sigma Prime Blog", url: "https://blog.sigmaprime.io/feeds/all.atom.xml" },
   { name: "ChainSafe Blog", url: "https://blog.chainsafe.io/rss/" },
   { name: "ApeWorX Blog", url: "https://api.paragraph.com/blogs/rss/@apeworx" },
+  { name: "EthSystems Blog", url: "https://ethsystems.org/rss.xml" },
   {
     name: "Vyper Blog",
     url: "https://blog.vyperlang.org/index.xml",
@@ -84,14 +85,6 @@ const SCRAPED_BLOGS: ScrapedBlog[] = [
     listUrl: "https://blog.fe-lang.org/",
     baseUrl: "https://blog.fe-lang.org",
     parse: parseFeBlog,
-  },
-  {
-    // This Astro site ships no RSS feed (feed.xml and every common feed path
-    // 404), so we scrape the post list off the blog index.
-    name: "IPTF Blog",
-    listUrl: "https://iptf.ethereum.org/blog/",
-    baseUrl: "https://iptf.ethereum.org",
-    parse: parseIptfBlog,
   },
 ];
 
@@ -392,48 +385,6 @@ function parseFeBlog(html: string): ScrapedEntry[] {
       // Append T00:00:00Z so the date is parsed as UTC midnight rather than
       // local time, keeping the cutoff comparison timezone-independent.
       published: new Date(`${dateStr}T00:00:00Z`),
-    });
-  }
-  return entries;
-}
-
-function parseIptfBlog(html: string): ScrapedEntry[] {
-  // Astro blog list: each post is a single anchor row —
-  //   <a href="/blog/SLUG/" class="post-row">
-  //     <div class="post-thumb"><img ...></div>
-  //     <div class="post-body">
-  //       <div class="post-meta"><time>YYYY-MM-DD</time><span>· Author</span></div>
-  //       <h3>Title</h3>
-  //       <p>Excerpt</p>
-  //     </div>
-  //   </a>
-  // The data-astro-cid-* attributes carry a per-build hash, so match loosely.
-  const rowOpen = /<a href="(\/blog\/[a-z0-9-]+)\/?"[^>]*class="post-row"/g;
-  const dateRe = /<time[^>]*>(\d{4}-\d{2}-\d{2})<\/time>/;
-  const titleRe = /<h3[^>]*>([^<]+)<\/h3>/;
-  const excerptRe = /<p[^>]*>([^<]+)<\/p>/;
-
-  const entries: ScrapedEntry[] = [];
-  let m;
-  while ((m = rowOpen.exec(html)) !== null) {
-    const href = m[1];
-    // Bound the chunk to this row by stopping at the next row's anchor.
-    const start = m.index;
-    const next = html.indexOf('<a href="/blog/', start + m[0].length);
-    const chunk = html.slice(start, next === -1 ? start + 4000 : next);
-
-    const dateMatch = chunk.match(dateRe);
-    const titleMatch = chunk.match(titleRe);
-    if (!dateMatch || !titleMatch) continue;
-
-    const excerptMatch = chunk.match(excerptRe);
-    entries.push({
-      href,
-      title: decodeEntities(titleMatch[1].trim()),
-      description: excerptMatch ? decodeEntities(excerptMatch[1].trim()) : "",
-      // Append T00:00:00Z so the date is parsed as UTC midnight rather than
-      // local time, keeping the cutoff comparison timezone-independent.
-      published: new Date(`${dateMatch[1]}T00:00:00Z`),
     });
   }
   return entries;

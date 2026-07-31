@@ -52,6 +52,7 @@ const BLOG_FEEDS: BlogFeed[] = [
   { name: "ChainSafe Blog", url: "https://blog.chainsafe.io/rss/" },
   { name: "ApeWorX Blog", url: "https://api.paragraph.com/blogs/rss/@apeworx" },
   { name: "EthSystems Blog", url: "https://ethsystems.org/rss.xml" },
+  { name: "Potuz Blog", url: "https://www.potuz.net/index.xml" },
   {
     name: "Vyper Blog",
     url: "https://blog.vyperlang.org/index.xml",

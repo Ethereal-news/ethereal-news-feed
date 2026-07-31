@@ -53,6 +53,9 @@ const BLOG_FEEDS: BlogFeed[] = [
   { name: "ApeWorX Blog", url: "https://api.paragraph.com/blogs/rss/@apeworx" },
   { name: "EthSystems Blog", url: "https://ethsystems.org/rss.xml" },
   { name: "Potuz Blog", url: "https://www.potuz.net/index.xml" },
+  // The feed isn't advertised in <head> (only an llms.txt link is); the
+  // conventional feed.xml/rss.xml paths 404, but /rss and /feed both serve it.
+  { name: "Base Engineering Blog", url: "https://blog.base.dev/rss" },
   {
     name: "Vyper Blog",
     url: "https://blog.vyperlang.org/index.xml",

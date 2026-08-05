@@ -1,4 +1,4 @@
-import { NewNewsItem } from "../types";
+import { Category, NewNewsItem } from "../types";
 import { getDefaultCategory } from "../categories";
 import {
   fetchRecentReleases,
@@ -13,6 +13,9 @@ interface ClientRepo {
   owner: string;
   repo: string;
   layer: "EL" | "CL";
+  // Overrides the default "Staking" category for non-client repos tracked
+  // here (e.g. the consensus spec, which belongs under "Layer 1").
+  category?: Category;
 }
 
 const CLIENTS: ClientRepo[] = [
@@ -45,6 +48,15 @@ const CLIENTS: ClientRepo[] = [
     repo: "grandine",
     layer: "CL",
   },
+  // Consensus Layer spec (not a client). Releases are always prereleases
+  // (alpha/beta), which the fetcher surfaces with the prerelease flag.
+  {
+    name: "Consensus Specs",
+    owner: "ethereum",
+    repo: "consensus-specs",
+    layer: "CL",
+    category: "Layer 1",
+  },
 ];
 
 async function fetchClient(client: ClientRepo): Promise<NewNewsItem[]> {
@@ -56,7 +68,7 @@ async function fetchClient(client: ClientRepo): Promise<NewNewsItem[]> {
     description: getDescription(release.body),
     source_type: "client_release" as const,
     source_name: `${client.name} (${client.layer})`,
-    category: getDefaultCategory("client_release"),
+    category: client.category ?? getDefaultCategory("client_release"),
     published_at: release.published_at,
     version: extractVersion(release.tag_name),
     prerelease: isPrerelease(release),

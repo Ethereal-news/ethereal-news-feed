@@ -57,6 +57,8 @@ const BLOG_FEEDS: BlogFeed[] = [
   // The feed isn't advertised in <head> (only an llms.txt link is); the
   // conventional feed.xml/rss.xml paths 404, but /rss and /feed both serve it.
   { name: "Base Engineering Blog", url: "https://blog.base.dev/rss" },
+  // Covers both /writings/ (long-form) and /updates/ (weekly notes).
+  { name: "Ethlabs Blog", url: "https://ethlabs.org/writings/feed.xml" },
   {
     name: "Vyper Blog",
     url: "https://blog.vyperlang.org/index.xml",

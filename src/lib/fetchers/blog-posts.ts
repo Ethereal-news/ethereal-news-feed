@@ -1,6 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { Category, NewNewsItem } from "../types";
 import { getDefaultCategory } from "../categories";
+import { getAuthHeader } from "./github";
 
 interface BlogFeed {
   name: string;
@@ -97,6 +98,20 @@ const SCRAPED_BLOGS: ScrapedBlog[] = [
     listUrl: "https://terencechain.com/writing/",
     baseUrl: "https://terencechain.com",
     parse: parseTerenceBlog,
+  },
+];
+
+const MARKDOWN_BLOGS: MarkdownBlog[] = [
+  {
+    // The site is a client-rendered SPA with no feed, and the post list is
+    // only assembled in the browser bundle, so there's nothing to scrape.
+    // The posts themselves are markdown files in the site repo, bundled at
+    // build time, so read them from GitHub instead.
+    name: "Protocol Guild Blog",
+    owner: "protocolguild",
+    repo: "protocol-guild-site",
+    path: "posts",
+    postUrl: (slug) => `https://www.protocolguild.org/blog/${slug}`,
   },
 ];
 
@@ -464,6 +479,133 @@ async function scrapeBlog(blog: ScrapedBlog, retries = 2): Promise<NewNewsItem[]
   return [];
 }
 
+interface MarkdownBlog {
+  name: string;
+  owner: string;
+  repo: string;
+  // Repo directory holding the post files, one markdown file per post named
+  // "YYYYMMDD-slug.md".
+  path: string;
+  postUrl: (slug: string) => string;
+  category?: Category;
+}
+
+interface GitHubContentEntry {
+  name: string;
+  type: string;
+  download_url: string | null;
+}
+
+// Front matter values are quoted with either ' or ", e.g. title: "A post".
+function getFrontMatterField(frontMatter: string, field: string): string {
+  const match = frontMatter.match(
+    new RegExp(`^${field}:\\s*(?:"([^"]*)"|'([^']*)'|(.*))$`, "m")
+  );
+  if (!match) return "";
+  return (match[1] ?? match[2] ?? match[3] ?? "").trim();
+}
+
+async function fetchMarkdownPost(
+  blog: MarkdownBlog,
+  entry: GitHubContentEntry,
+  fallbackPublished: Date
+): Promise<NewNewsItem | null> {
+  if (!entry.download_url) return null;
+
+  const res = await fetch(entry.download_url, {
+    headers: { "User-Agent": "ethereal-news-feed" },
+  });
+  if (!res.ok) {
+    console.error(
+      `[blog-posts] ${blog.name}: HTTP ${res.status} fetching ${entry.name}`
+    );
+    return null;
+  }
+
+  const markdown = await res.text();
+  const frontMatter = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? "";
+  const slug = entry.name.replace(/\.md$/, "");
+
+  const title = getFrontMatterField(frontMatter, "title") || slug;
+  // The front matter date is authoritative when present; the filename prefix
+  // is what we filtered on, and the two can differ.
+  const dated = new Date(`${getFrontMatterField(frontMatter, "date")}T00:00:00Z`);
+  const published = isNaN(dated.getTime()) ? fallbackPublished : dated;
+
+  return {
+    title,
+    url: blog.postUrl(slug),
+    description: truncate(getFrontMatterField(frontMatter, "excerpt")),
+    source_type: "blog_post" as const,
+    source_name: blog.name,
+    category: blog.category ?? getDefaultCategory("blog_post"),
+    published_at: published.toISOString(),
+  };
+}
+
+async function fetchMarkdownBlog(
+  blog: MarkdownBlog,
+  retries = 2
+): Promise<NewNewsItem[]> {
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "ethereal-news-feed",
+    ...getAuthHeader(),
+  };
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${blog.owner}/${blog.repo}/contents/${blog.path}`,
+        { headers }
+      );
+      if (!res.ok) {
+        if (attempt < retries) {
+          console.warn(`[blog-posts] ${blog.name}: HTTP ${res.status}, retrying (${attempt + 1}/${retries})`);
+          await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+          continue;
+        }
+        console.error(`[blog-posts] ${blog.name}: failed after ${retries + 1} attempts`);
+        return [];
+      }
+
+      const entries = (await res.json()) as GitHubContentEntry[];
+      const cutoff = getRecentCutoff();
+
+      // Only the filename date is available from the listing, so use it to
+      // narrow down which posts are worth downloading in full.
+      const recent = entries.filter((entry) => {
+        if (entry.type !== "file" || !entry.name.endsWith(".md")) return false;
+        const datePrefix = entry.name.match(/^(\d{4})(\d{2})(\d{2})-/);
+        if (!datePrefix) return false;
+        const [, year, month, day] = datePrefix;
+        return new Date(`${year}-${month}-${day}T00:00:00Z`) >= cutoff;
+      });
+
+      const posts: NewNewsItem[] = [];
+      for (const entry of recent) {
+        const [, year, month, day] = entry.name.match(/^(\d{4})(\d{2})(\d{2})-/)!;
+        const post = await fetchMarkdownPost(
+          blog,
+          entry,
+          new Date(`${year}-${month}-${day}T00:00:00Z`)
+        );
+        if (post) posts.push(post);
+      }
+      return posts;
+    } catch (err) {
+      if (attempt < retries) {
+        console.warn(`[blog-posts] ${blog.name}: ${err instanceof Error ? err.message : 'unknown error'}, retrying (${attempt + 1}/${retries})`);
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+        continue;
+      }
+      console.error(`[blog-posts] ${blog.name}: failed after ${retries + 1} attempts:`, err instanceof Error ? err.message : err);
+      return [];
+    }
+  }
+  return [];
+}
+
 export async function fetchBlogPosts(): Promise<NewNewsItem[]> {
   const results: NewNewsItem[] = [];
 
@@ -476,6 +618,12 @@ export async function fetchBlogPosts(): Promise<NewNewsItem[]> {
 
   for (const blog of SCRAPED_BLOGS) {
     const posts = await scrapeBlog(blog);
+    results.push(...posts);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  for (const blog of MARKDOWN_BLOGS) {
+    const posts = await fetchMarkdownBlog(blog);
     results.push(...posts);
     await new Promise((resolve) => setTimeout(resolve, 500));
   }

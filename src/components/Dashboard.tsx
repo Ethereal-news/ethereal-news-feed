@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { NewsItem as NewsItemType, Category, Status, CATEGORIES } from "@/lib/types";
 import CategorySection from "./CategorySection";
 
@@ -10,10 +10,13 @@ interface DashboardProps {
 
 export default function Dashboard({ initialItems }: DashboardProps) {
   const [items, setItems] = useState(initialItems);
+  const [prevInitialItems, setPrevInitialItems] = useState(initialItems);
 
-  useEffect(() => {
+  // Reset local state when the server sends new items (e.g. on filter change)
+  if (initialItems !== prevInitialItems) {
+    setPrevInitialItems(initialItems);
     setItems(initialItems);
-  }, [initialItems]);
+  }
 
   async function handleStatusChange(id: number, status: Status) {
     const res = await fetch(`/api/items/${id}`, {

@@ -1,5 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
-import { Category, NewNewsItem } from "../types";
+import { Category, NewNewsItem, SourceType } from "../types";
 import { getDefaultCategory } from "../categories";
 import { getAuthHeader } from "./github";
 
@@ -9,6 +9,10 @@ interface BlogFeed {
   // Some feeds list entry links on a domain that differs from where the feed
   // itself is hosted; rewrite those links to a reachable host.
   rewriteUrl?: (url: string) => string;
+  // Not every RSS source is a blog; override when the entries belong to a
+  // different source type or category than the blog_post defaults.
+  sourceType?: SourceType;
+  category?: Category;
 }
 
 const BLOG_FEEDS: BlogFeed[] = [
@@ -59,6 +63,14 @@ const BLOG_FEEDS: BlogFeed[] = [
   { name: "Base Engineering Blog", url: "https://blog.base.dev/rss" },
   // Covers both /writings/ (long-form) and /updates/ (weekly notes).
   { name: "Ethlabs Blog", url: "https://ethlabs.org/writings/feed.xml" },
+  {
+    // Not a blog: EIP inclusion-stage changes, network activations, and
+    // published core dev call summaries.
+    name: "Forkcast",
+    url: "https://forkcast.org/feed.xml",
+    sourceType: "eip",
+    category: "Layer 1",
+  },
   {
     name: "Vyper Blog",
     url: "https://blog.vyperlang.org/index.xml",
@@ -287,15 +299,18 @@ async function fetchFeed(feed: BlogFeed, retries = 2): Promise<NewNewsItem[]> {
           const published = new Date(entry.published_at);
           return published >= cutoff && !isNaN(published.getTime());
         })
-        .map((entry) => ({
-          title: entry.title,
-          url: feed.rewriteUrl ? feed.rewriteUrl(entry.url) : entry.url,
-          description: entry.description,
-          source_type: "blog_post" as const,
-          source_name: feed.name,
-          category: getDefaultCategory("blog_post"),
-          published_at: entry.published_at,
-        }));
+        .map((entry) => {
+          const sourceType = feed.sourceType ?? "blog_post";
+          return {
+            title: entry.title,
+            url: feed.rewriteUrl ? feed.rewriteUrl(entry.url) : entry.url,
+            description: entry.description,
+            source_type: sourceType,
+            source_name: feed.name,
+            category: feed.category ?? getDefaultCategory(sourceType),
+            published_at: entry.published_at,
+          };
+        });
     } catch (err) {
       if (attempt < retries) {
         console.warn(`[blog-posts] ${feed.name}: ${err instanceof Error ? err.message : 'unknown error'}, retrying (${attempt + 1}/${retries})`);

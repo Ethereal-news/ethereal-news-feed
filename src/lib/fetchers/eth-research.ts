@@ -1,4 +1,3 @@
-import { execSync } from "child_process";
 import { XMLParser } from "fast-xml-parser";
 import { NewNewsItem, Category } from "../types";
 
@@ -51,14 +50,9 @@ interface RssItem {
 }
 
 async function fetchRss(url: string): Promise<string> {
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.text();
-  } catch {
-    // Fallback to curl (works around WSL2 networking issues)
-    return execSync(`curl -s --connect-timeout 10 ${url}`, { encoding: "utf8" });
-  }
+  const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.text();
 }
 
 async function fetchDiscourse(source: DiscourseSource): Promise<NewNewsItem[]> {

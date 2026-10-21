@@ -1,5 +1,4 @@
 import { NewNewsItem } from "../types";
-import { getDefaultCategory } from "../categories";
 import { getAuthHeader, getDescription, GitHubAuthError } from "./github";
 
 interface GitHubIssue {
